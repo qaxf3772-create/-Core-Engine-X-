@@ -1,48 +1,52 @@
 import pygame
 import sys
 
-# 1. إعدادات المحرك الأساسية
+# 1. الإعدادات
 pygame.init()
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Core-Engine-X: Mobile & PC")
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
-# 2. بيانات اللاعب
-x, y = SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2
-speed = 5
-target_x, target_y = x, y  # نقطة الهدف عند اللمس
+# 2. بيانات الكاميرا والعالم
+player_pos = [WIDTH // 2, HEIGHT // 2]
+camera_offset = [0, 0]
+world_size = 2000 # حجم العالم (أكبر بكثير من الشاشة)
+
+# 3. عوائق عشوائية في العالم (أشجار أو صخور)
+obstacles = []
+for i in range(20):
+    obstacles.append((100 * i, 300))
 
 while True:
-    # --- نظام إدارة المدخلات (Input System) ---
+    screen.fill((30, 30, 30))
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         
-        # دعم اللمس للهاتف: المربع يلحق مكان الإصبع
-        if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEMOTION:
-            if pygame.mouse.get_pressed()[0]: # إذا كان هناك ضغط
-                target_x, target_y = event.pos
-                x, y = target_x - 25, target_y - 25
+        # التحكم باللمس (تحديث مكان اللاعب)
+        if event.type == pygame.MOUSEMOTION or event.type == pygame.MOUSEBUTTONDOWN:
+            if pygame.mouse.get_pressed()[0]:
+                player_pos[0], player_pos[1] = event.pos[0] + camera_offset[0], event.pos[1] + camera_offset[1]
 
-    # دعم لوحة المفاتيح للكمبيوتر
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]: x -= speed
-    if keys[pygame.K_RIGHT]: x += speed
-    if keys[pygame.K_UP]: y -= speed
-    if keys[pygame.K_DOWN]: y += speed
+    # 4. منطق الكاميرا (تجعل اللاعب دائماً في المنتصف)
+    camera_offset[0] = player_pos[0] - WIDTH // 2
+    camera_offset[1] = player_pos[1] - HEIGHT // 2
 
-    # --- نظام الرسم (Rendering System) ---
-    screen.fill((20, 20, 25)) # خلفية داكنة احترافية
-    
-    # رسم المربع (اللاعب)
-    pygame.draw.rect(screen, (0, 255, 150), (x, y, 50, 50))
-    
-    # إضافة نص بسيط يوضح الإحداثيات
-    font = pygame.font.SysFont(None, 36)
-    img = font.render(f'Pos: {int(x)}, {int(y)}', True, (255, 255, 255))
-    screen.blit(img, (20, 20))
+    # 5. رسم الأشياء بالنسبة للكاميرا (Render Pipeline)
+    # رسم خطوط الشبكة للأرضية لإظهار الحركة
+    for x in range(0, world_size, 100):
+        pygame.draw.line(screen, (50, 50, 50), (x - camera_offset[0], 0), (x - camera_offset[0], HEIGHT))
+    for y in range(0, world_size, 100):
+        pygame.draw.line(screen, (50, 50, 50), (0, y - camera_offset[1]), (WIDTH, y - camera_offset[1]))
+
+    # رسم العوائق
+    for obs in obstacles:
+        pygame.draw.rect(screen, (200, 100, 0), (obs[0] - camera_offset[0], obs[1] - camera_offset[1], 40, 40))
+
+    # رسم اللاعب
+    pygame.draw.rect(screen, (0, 255, 150), (player_pos[0] - camera_offset[0], player_pos[1] - camera_offset[1], 50, 50))
 
     pygame.display.flip()
     clock.tick(60)
